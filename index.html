@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="ja">
 <head>
@@ -178,10 +179,7 @@ main{padding:1.6rem 2rem;max-width:140rem;margin:0 auto}
     <div class="logo-icon">📋</div>
     <div><div class="logo-text">ゆかりん 優先順位マトリックス</div><div class="logo-sub">金澤さんコンサル / 2026</div></div>
   </div>
-  <div style="display:flex;align-items:center;gap:0.6rem">
-  <span class="save-badge" id="save-badge">未保存</span>
-  <button id="save-btn" onclick="saveAsFile()" style="background:#764ba2;color:#fff;border:none;border-radius:0.6rem;padding:0.4rem 1rem;font-size:0.85rem;font-weight:600;cursor:pointer;font-family:var(--font)">💾 保存</button>
-</div>
+  <span class="save-badge" id="save-badge">自動保存</span>
 </header>
 <div class="tabs">
   <button class="tab active" onclick="switchTab('today',this)">📅 今日のマトリックス</button>
@@ -1106,7 +1104,7 @@ function onDrop(e){
   if(dragging.dataset.done==='1'){dragging.querySelector('.card-check').checked=false;dragging.classList.remove('done');dragging.dataset.done='0';}
   document.getElementById('area-'+matrix+'-'+zone).appendChild(dragging);
   updateCounts(matrix);if(pm!==matrix)updateCounts(pm);
-  updateLegend(matrix);updateLegend(pm);scheduleSave();markUnsaved();
+  updateLegend(matrix);updateLegend(pm);scheduleSave();
 }
 function onOverDone(e,matrix){e.preventDefault();if(dragging)document.getElementById('done-section-'+matrix).classList.add('drag-over');}
 function onLeaveDone(e,matrix){document.getElementById('done-section-'+matrix).classList.remove('drag-over');}
@@ -1181,7 +1179,7 @@ function saveAll(){
     if(b)b.textContent='⚠️ 保存失敗';
   }
 }
-function scheduleSave(){clearTimeout(saveTimer);saveTimer=setTimeout(saveAll,500);markUnsaved();}
+function scheduleSave(){clearTimeout(saveTimer);saveTimer=setTimeout(saveAll,500);}
 
 // ===================== INITIAL DATA =====================
 const TODAY_INIT=[
@@ -1336,73 +1334,6 @@ document.addEventListener('DOMContentLoaded',function(){
   if(inqEl) inqEl.textContent = inq;
 })();
 
-function saveAsFile(){
-  // Collect current state as HTML strings per area
-  const areas=['q1','q2','q3','q4'];
-  let html=document.documentElement.outerHTML;
-
-  // Replace each cards-area with current innerHTML
-  areas.forEach(z=>{
-    ['today','longterm'].forEach(m=>{
-      const el=document.getElementById('area-'+m+'-'+z);
-      if(!el)return;
-      // Get inner HTML, clean up dragging classes
-      let inner=el.innerHTML.replace(/\s*dragging/g,'').replace(/\s*drag-over/g,'');
-      // Replace in file HTML - find the div with this id and replace its content
-      const startTag=`<div class="cards-area" id="area-${m}-${z}">`;
-      const startIdx=html.indexOf(startTag);
-      if(startIdx<0)return;
-      const afterStart=startIdx+startTag.length;
-      // Find the closing </div> for this area (depth tracking)
-      let depth=1,i=afterStart;
-      while(i<html.length&&depth>0){
-        if(html[i]==='<'){
-          if(html.slice(i,i+5)==='</div')depth--;
-          else if(html.slice(i,i+4)==='<div')depth++;
-        }
-        if(depth>0)i++;
-      }
-      html=html.slice(0,afterStart)+inner+html.slice(i);
-    });
-  });
-
-  // Replace done areas
-  ['today','longterm'].forEach(m=>{
-    const el=document.getElementById('done-area-'+m);
-    if(!el)return;
-    let inner=el.innerHTML.replace(/\s*dragging/g,'').replace(/\s*drag-over/g,'');
-    const startTag=`<div class="done-cards" id="done-area-${m}">`;
-    const startIdx=html.indexOf(startTag);
-    if(startIdx<0)return;
-    const afterStart=startIdx+startTag.length;
-    let depth=1,i=afterStart;
-    while(i<html.length&&depth>0){
-      if(html[i]==='<'){
-        if(html.slice(i,i+5)==='</div')depth--;
-        else if(html.slice(i,i+4)==='<div')depth++;
-      }
-      if(depth>0)i++;
-    }
-    html=html.slice(0,afterStart)+inner+html.slice(i);
-  });
-
-  // Download
-  const blob=new Blob([html],{type:'text/html;charset=utf-8'});
-  const url=URL.createObjectURL(blob);
-  const a=document.createElement('a');
-  a.href=url;
-  a.download='yukarin_matrix_saved.html';
-  a.click();
-  URL.revokeObjectURL(url);
-  const b=document.getElementById('save-badge');
-  if(b){b.textContent='✓ ダウンロード完了！';b.className='save-badge saved';setTimeout(()=>{b.textContent='未保存';b.className='save-badge';},3000);}
-}
-
-// Mark as unsaved when anything changes
-function markUnsaved(){
-  const b=document.getElementById('save-badge');
-  if(b&&b.textContent!=='✓ ダウンロード完了！'){b.textContent='● 未保存';b.style.color='#C0392B';}
-}
 </script>
 </body>
 </html>
