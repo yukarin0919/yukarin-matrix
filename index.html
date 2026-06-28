@@ -1170,13 +1170,17 @@ function saveAll(){
   });
   document.querySelectorAll('#done-area-longterm .card').forEach(c=>{state.done_lt.push({id:c.dataset.id,text:c.dataset.text,tag:c.dataset.tag,priority:parseInt(c.dataset.priority)||3,done:true,detail:c.dataset.detail||'',icon:c.dataset.icon||'📌',zone:c.dataset.zone||'q1'});});
   document.querySelectorAll('#done-area-today .card').forEach(c=>{state.done_td.push({id:c.dataset.id,text:c.dataset.text,tag:c.dataset.tag,priority:parseInt(c.dataset.priority)||3,done:true,detail:c.dataset.detail||'',icon:c.dataset.icon||'📌',zone:c.dataset.zone||'q1'});});
+  const json=JSON.stringify(state);
+  const totalCards=state.lt.length+state.td.length+state.done_lt.length+state.done_td.length;
+  // Only save if there are actual cards (prevent saving empty state)
+  if(totalCards===0)return;
   try{
-    localStorage.setItem(SAVE_KEY,JSON.stringify(state));
+    localStorage.setItem(SAVE_KEY,json);
     const b=document.getElementById('save-badge');
-    if(b){b.textContent='✓ 保存済み';b.className='save-badge saved';setTimeout(()=>{b.textContent='自動保存';b.className='save-badge';},2000);}
+    if(b){b.textContent='✓ 保存済み ('+totalCards+'件)';b.className='save-badge saved';setTimeout(()=>{b.textContent='自動保存';b.className='save-badge';},2000);}
   }catch(e){
     const b=document.getElementById('save-badge');
-    if(b)b.textContent='⚠️ 保存失敗';
+    if(b){b.textContent='⚠️ 保存失敗';b.style.color='#C0392B';}
   }
 }
 function scheduleSave(){clearTimeout(saveTimer);saveTimer=setTimeout(saveAll,500);}
@@ -1253,7 +1257,7 @@ function loadInitial(){
   TODAY_INIT.forEach(d=>{if(d.text){const a=document.getElementById('area-today-'+d.zone);if(a)a.appendChild(buildCard(d,'today',d.zone));}});
   LT_INIT.forEach(d=>{if(d.text){const a=document.getElementById('area-longterm-'+d.zone);if(a)a.appendChild(buildCard(d,'longterm',d.zone));}});
   ['today','longterm'].forEach(m=>{updateCounts(m);updateLegend(m);});
-  saveAll(); // Save immediately so reload works
+  // NOTE: do NOT call saveAll() here - only save when user makes changes
 }
 function attachAllCards(){
   document.querySelectorAll('.card').forEach(function(el){
@@ -1297,11 +1301,24 @@ function attachAllCards(){
 }
 
 document.addEventListener('DOMContentLoaded',function(){
+  // Check localStorage first BEFORE clearing anything
+  let savedJson=null;
+  try{savedJson=localStorage.getItem(SAVE_KEY);}catch(e){}
+  
+  // Always clear static HTML cards
   ['q1','q2','q3','q4'].forEach(z=>{
     ['today','longterm'].forEach(m=>{const a=document.getElementById('area-'+m+'-'+z);if(a)a.innerHTML='';});
   });
   ['today','longterm'].forEach(m=>{const d=document.getElementById('done-area-'+m);if(d)d.innerHTML='';});
-  if(!loadState())loadInitial();
+  
+  // Now load: saved data OR initial data
+  const loaded=loadState();
+  if(!loaded){
+    loadInitial();
+  } else {
+    const b=document.getElementById('save-badge');
+    if(b){b.textContent='✓ 復元しました';b.className='save-badge saved';setTimeout(()=>{b.textContent='自動保存';b.className='save-badge';},2000);}
+  }
   const d=new Date();
   const diff=Math.ceil((new Date('2025-07-09')-d)/(1000*60*60*24));
   const n=document.getElementById('weight-countdown');
